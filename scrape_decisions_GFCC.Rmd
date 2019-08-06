@@ -134,15 +134,85 @@ save(df_all_decisions, file = "df_all_decisions.Rda")
 Clean the decisions. First drop the decisions with an "Urteil", because these are not Chamber decisions
 
 ```{r}
+source("helper_functions.R")
 
 #load the 
 
 chamber_decisions <- df_all_decisions[!grepl("Urteil", df_all_decisions$header), ]
 
 
+#some of the remaining ones are a "Beschluss", but also not a chamber decisions. Because we know that sometimes there is a mistake in the citings, we make double sure that we do not drop the wrong decisions by checking whether the word "Kammer" is in the header of the decision and the suggested citation:
+
+chamber_decisions$check_if_chamber1 <- grepl("Kammer", chamber_decisions$cite)
+chamber_decisions$check_if_chamber2 <- grepl("Kammer", as.character(chamber_decisions$chamber_senate))
+
+#always true
+chamber_decisions$check_if_chamber1 == chamber_decisions$check_if_chamber2
+
+#only keep the decisions which are not chamber decisions
+
+chamber_decisions <- chamber_decisions[chamber_decisions$check_if_chamber1 == TRUE, ]
+
+#clean the aktenzeichen
+chamber_decisions$az <- gsub("-", "",chamber_decisions$aktenzeichen) %>% str_trim()
+
+#create date
+
+for(i in 1:nrow(chamber_decisions)){
+  
+tmp <-  strsplit(as.character(chamber_decisions$header[i]), " ") %>%  unlist()
+chamber_decisions$date[i] <- str_c(tmp[3:5], collapse = " ")
+
+}
+
+chamber_decisions$date <- german_date_to_date(chamber_decisions$date)
+
+#extract the senate the chamber decision was decided in
+
+chamber_decisions$senat <- str_extract(chamber_decisions$az, "[0-9]+") 
+chamber_decisions$senat_check <- ifelse(grepl("Ersten Senats", as.character(chamber_decisions$chamber_senate)), 1, 2)
+
+
+#extract the chambers
+
+chamber_decisions$kammer_cit <- str_extract(as.character(chamber_decisions$cite), "[0-9]+")
+chamber_decisions$kammer_txt <- str_extract(as.character(chamber_decisions$chamber_senate), "[0-9]+") 
+
+#check:
+chamber_decisions$kammer_cit == chamber_decisions$kammer_txt
+  
+
+#extracting the judges names
+
+chamber_decisions$richter_txt <- 
+chamber_decisions
+
+
+#Einstweilige Anordnung:
+
+chamber_decisions$anordnung <- ifelse(grepl("BvQ", chamber_decisions$az), 1, 0)
+
+
 
 ```
 
+
+Bring them in the correct format:
+
+```{r}
+
+setwd("~/Dropbox/Papers Mannheim/Paper 2 Kammerbesetzung/Causal Inference Paper/chamber_paper_august2019/chamberGFCC")
+case <- read.table("in/data-input/judicialData_Sep16.txt", sep="\t", encoding = "UTF-8")
+names(case) <- c("i", "az", "date", "senat", "kammer_cit", "kammer_txt", "richter_raw", "richter_txt", "richter_cit", "Anordnung", "link")
+
+```
+
+
+```{r}
+
+
+
+```
 
 
 
