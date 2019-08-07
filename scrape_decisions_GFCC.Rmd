@@ -184,8 +184,15 @@ chamber_decisions$kammer_cit == chamber_decisions$kammer_txt
 
 #extracting the judges names
 
-chamber_decisions$richter_txt <- 
-chamber_decisions
+
+for(i in 1:nrow(chamber_decisions)){
+  
+chamber_decisions$richter_txt[i] <- c(names_extract(chamber_decisions$judge1[i]), names_extract(chamber_decisions$judge2[i]),
+                                   names_extract(chamber_decisions$judge3[i])) %>% 
+                                 str_c(collapse = " ") %>%  
+                                  gsub("\\s", ",", .) #to bring it in the form for later analyses
+
+}
 
 
 #Einstweilige Anordnung:

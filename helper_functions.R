@@ -35,6 +35,34 @@ x <- as.Date(x, "%d/%m/%Y")
 }
 
 
+names_extract <- function(x){
+
+x <- gsub("Präsidenten", "", x)   
+x <- gsub("Vizepräsidenten", "", x)   
+x <- gsub("die", "", x) 
+x <- gsub("den","",  x)  
+x <- gsub("und","",  x)  
+
+x <- gsub("Richterinnen", "", x)  
+x <- gsub("Richterin", "", x)  
+x <- gsub("Richter", "", x)  
+
+
+x <- gsub(" ", "", x)
+x <- gsub("\\,", "", x)
+}
+
+
+# test name extraction
+# (bla <- names_extract(as.character(chamber_decisions$judge1 )))
+# (bla2 <- names_extract(as.character(chamber_decisions$judge2 )))
+# (bla3 <- names_extract(as.character(chamber_decisions$judge3 )))
+
+
+
+
+
+
 
 
 
