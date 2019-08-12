@@ -187,13 +187,11 @@ df_1161_1479  <- do.call("rbind", list_1161_1479)
 ```{r}
 
 
-list_1481 <- list()
+list_1481_1954 <- list()
 
-
-i <- 1491
-
-for(i in 1481:1495){
+for(i in 1481:1954){
   
+
   message("Scraping decision ", i)
   
   case <- read_html(decisions[i])
@@ -202,18 +200,14 @@ for(i in 1481:1495){
   cite <- case %>% html_nodes(".cite") %>% html_text()
   chamber_senate <- case %>% html_nodes(".rr1") %>% html_text() %>% str_c(collapse = " ")
   
-  #this is where the names are usually located in the html: 
-  
   judges_names <- case %>% html_nodes(".rr2 span") %>% html_text()
   
-  #for some decisions the names of the judges are at another place:
   if(length(judges_names) == 0){
     judges_names1 <- case %>% html_nodes(".rr2") %>% html_text() %>% strsplit("\n") %>% unlist()
     judge1 <- judges_names1[1]
     judge2 <- judges_names1[2]
     judge3 <- judges_names1[3]
-    
-  #if they are not on another place, use the original ones:  
+    judges_names <- str_c(judges_names1, collapse = " ")
   } else{
     
   judge1 <- judges_names[1]
@@ -221,16 +215,14 @@ for(i in 1481:1495){
   judge3 <- judges_names[3]
   judges_names <- str_c(judges_names, collapse = " ")
   }
-  
-  judges_names <- str_c(judges_names1, collapse = " ")
-  
+
   link_decision <- case %>% html_nodes(".cite a") %>% html_text()
   
   #do not extract the aktenzeichen; this can be done via the header later; the reason is that the AZ link is error prone if multiple of them are collected together
   #aktenzeichen <- case %>% html_nodes(".az2 span") %>% html_text()
   #aktenzeichen <- aktenzeichen[1] #extract only the first AZ; this is also the one shown in the link of a decision
   
-  list_1481[[i]] <-   data.frame(header = header, cite = cite, chamber_senate = chamber_senate, 
+  list_1481_1954[[i]] <-   data.frame(header = header, cite = cite, chamber_senate = chamber_senate, 
                                  judges_names = judges_names,
                                  judge1 = judge1, judge2 = judge2, judge3 = judge3,
                                  link_decision = link_decision)
@@ -243,7 +235,71 @@ for(i in 1481:1495){
 }
 
 
-df_1481  <- do.call("rbind", list_1481)
+df_1481_1954  <- do.call("rbind", list_1481_1954)
+
+```
+
+decision 1955 is a Venice Commission abstract summary. Not a real decision. Cannot find judge names.
+
+
+```{r}
+
+
+list_1956 <- list()
+
+for(i in 1956:length(decisions)){
+  
+
+  message("Scraping decision ", i)
+  
+  case <- read_html(decisions[i])
+  
+  header <- case %>% html_nodes("#navBreadcrumbs strong") %>% html_text()
+  cite <- case %>% html_nodes(".cite") %>% html_text()
+  chamber_senate <- case %>% html_nodes(".rr1") %>% html_text() %>% str_c(collapse = " ")
+  
+  judges_names <- case %>% html_nodes(".rr2 span") %>% html_text()
+  
+  if(length(judges_names) == 0){
+    judges_names1 <- case %>% html_nodes(".rr2") %>% html_text() %>% strsplit("\n") %>% unlist()
+    judge1 <- judges_names1[1]
+    judge2 <- judges_names1[2]
+    judge3 <- judges_names1[3]
+    judges_names <- str_c(judges_names1, collapse = " ")
+  } else{
+    
+  judge1 <- judges_names[1]
+  judge2 <- judges_names[2]
+  judge3 <- judges_names[3]
+  judges_names <- str_c(judges_names, collapse = " ")
+  }
+
+    if(length(chamber_senate == 0)){
+    chamber_senate <- "Not found"
+  }
+  
+  
+  
+  link_decision <- case %>% html_nodes(".cite a") %>% html_text()
+  
+  #do not extract the aktenzeichen; this can be done via the header later; the reason is that the AZ link is error prone if multiple of them are collected together
+  #aktenzeichen <- case %>% html_nodes(".az2 span") %>% html_text()
+  #aktenzeichen <- aktenzeichen[1] #extract only the first AZ; this is also the one shown in the link of a decision
+  
+  list_1956[[i]] <-   data.frame(header = header, cite = cite, chamber_senate = chamber_senate, 
+                                 judges_names = judges_names,
+                                 judge1 = judge1, judge2 = judge2, judge3 = judge3,
+                                 link_decision = link_decision)
+  
+  
+  message("Iteration ", i, " of ", length(decisions),  " successful.")
+  message("taking a break")
+  Sys.sleep(1.5)
+  
+}
+
+
+df_1956  <- do.call("rbind", list_1956)
 
 ```
 
@@ -256,6 +312,11 @@ save(df_all_decisions, file = "df_all_decisions.Rda")
 
 
 ```
+
+
+
+
+
 
 
 NOW GET ALL DECISIONS
