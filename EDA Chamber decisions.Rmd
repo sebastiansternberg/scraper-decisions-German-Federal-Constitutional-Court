@@ -1,0 +1,95 @@
+---
+title: "EDA Chamber Decisions GFCC"
+author: "Sebastian Sternberg"
+date: "2 September 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+Load data and packages
+
+```{r}
+rm(list = ls())
+
+require(magrittr)
+require(dplyr)
+require(ggplot2)
+require(lubridate)
+
+#load data
+
+load("chamber_decision_cleaned.Rda")
+
+df <- chamber_decisions
+
+```
+
+
+# Summarize by date
+
+### Summarize by year, month, week day
+
+```{r}
+
+df$year <- year(df$date)
+df$month <- month(df$date)
+df$weekday <- wday(df$date, label = T)
+
+```
+
+
+```{r}
+
+df_year <- df %>% group_by(year) %>% tally()
+df_year_senat <- df %>% group_by(year, senat) %>% tally()
+df_year_senat_chamber <- df %>% group_by(year, senat, chamber) %>% tally()
+
+
+
+#in one call
+ggplot(tally(group_by(df, Degree.Year, Employment.Data.Type)),
+    aes(x = Degree.Year, y = n, fill = Employment.Data.Type)) +
+    geom_bar(stat="identity") + labs(fill="Employment")
+
+
+ggplot(df_year, aes(x = year, y = n)) +
+    geom_bar(stat="identity")
+
+
+#year by Senate
+ggplot(df_year_senat, aes(x = year, y = n, fill = senat)) +
+    geom_bar(stat="identity") + labs(fill="Senate")
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

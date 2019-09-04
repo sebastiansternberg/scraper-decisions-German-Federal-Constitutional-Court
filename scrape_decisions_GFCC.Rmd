@@ -9,21 +9,24 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+Load necessary packages. Scraping is mainly done using rvest. 
 
 ```{r}
 rm(list = ls())
 library(rvest)
 library(magrittr)
 library(stringr)
+require(stringi)
 require(dplyr)
 
 ```
 
-This should take around 45 minutes to finish. 
+
+This extracts all the links to each individual Chamber decision in the first step. These links are then used to extact the information in the second step. This should take around 45 minutes to finish, depending on the sys.sleep chosen.
 
 ```{r}
 
-pages <- c(1:721) # there are 721 pages to scrape
+pages <- c(1:721) # there are 721 pages to scrape (721 pages with each 10 decisions)
 
 # getting the links to the decisions
 links <- c()
@@ -41,7 +44,7 @@ links
 save(links, file = "links_decisons.Rda")
 ```
 
-
+Now we have the raw links. These need to be cleaned, such that we can call each link in the next step. 
 
 ```{r}
 
@@ -56,9 +59,9 @@ decisions <- gsub("SharedDocs/", "https://www.bundesverfassungsgericht.de/Shared
 
 ```
 
+In the second step, we want to collect information from the decision texts. For this, we loop over each decision link. On each of these pages with the decision texts, we obtain the required information using the respective html node path. The following shows how this works for one decision:
 
 ```{r}
-
 
 # Testing for one text
 case <- read_html("https://www.bundesverfassungsgericht.de/SharedDocs/Entscheidungen/DE/2019/05/qk20190524_1bvq004619.html")
@@ -73,245 +76,17 @@ judge3 <- case %>% html_nodes(".absatz:nth-child(10) span") %>% html_text()
 
 link_decision <- case %>% html_nodes(".cite a") %>% html_text()
 
-aktenzeichen <- case %>% html_nodes(".az2 span") %>% html_text()
-
-
-```
-
-Looping over all decision links:
-
-
 #http://www.residualthoughts.com/2018/03/28/topic-analysis-of-tim-ferris-podcast-using-rvest/
 
-
-For the first 1159 decisions:
-
-```{r}
-
-df_list <- list()
-
-for(i in 1:1159){
-  
-  message("Scraping decision ", i)
-  
-case <- read_html(decisions[i])
-
-header <- case %>% html_nodes("#navBreadcrumbs strong") %>% html_text()
-cite <- case %>% html_nodes(".cite") %>% html_text()
-chamber_senate <- case %>% html_nodes(".rr1") %>% html_text() %>% str_c(collapse = " ")
-
-judges_names <- case %>% html_nodes(".rr2 span") %>% html_text()
-judge1 <- judges_names[1]
-judge2 <- judges_names[2]
-judge3 <- judges_names[3]
-
-judges_names <- str_c(judges_names, collapse = " ")
-
-link_decision <- case %>% html_nodes(".cite a") %>% html_text()
-
-#do not extract the aktenzeichen; this can be done via the header later; the reason is that the AZ link is error prone if multiple of them are collected together
-#aktenzeichen <- case %>% html_nodes(".az2 span") %>% html_text()
-#aktenzeichen <- aktenzeichen[1] #extract only the first AZ; this is also the one shown in the link of a decision
-
-df_list[[i]] <-   data.frame(header = header, cite = cite, chamber_senate = chamber_senate, 
-                             judges_names = judges_names,
-                             judge1 = judge1, judge2 = judge2, judge3 = judge3,
-                             link_decision = link_decision)
-
-
-message("Iteration ", i, " of ", length(decisions),  " successful.")
-message("taking a break")
-Sys.sleep(1.5)
-  
-}
-
-df_1_1159  <- do.call("rbind", df_list)
-
-
-#decision 1160 is problematic becaust it is a weired Verzögerungsbeschwerde and does not follow the normal structure.
-#TO DO: fix it with trycatch error such that the loop continues
-
 ```
 
-For the decisions 1161 to 1479
-```{r}
-
-list_1161_1479 <- list()
-
-for(i in 1161:length(decisions)){
-  
-  message("Scraping decision ", i)
-  
-case <- read_html(decisions[i])
-
-header <- case %>% html_nodes("#navBreadcrumbs strong") %>% html_text()
-cite <- case %>% html_nodes(".cite") %>% html_text()
-chamber_senate <- case %>% html_nodes(".rr1") %>% html_text() %>% str_c(collapse = " ")
-
-judges_names <- case %>% html_nodes(".rr2 span") %>% html_text()
-judge1 <- judges_names[1]
-judge2 <- judges_names[2]
-judge3 <- judges_names[3]
-
-judges_names <- str_c(judges_names, collapse = " ")
-
-link_decision <- case %>% html_nodes(".cite a") %>% html_text()
-
-#do not extract the aktenzeichen; this can be done via the header later; the reason is that the AZ link is error prone if multiple of them are collected together
-#aktenzeichen <- case %>% html_nodes(".az2 span") %>% html_text()
-#aktenzeichen <- aktenzeichen[1] #extract only the first AZ; this is also the one shown in the link of a decision
-
-list_1161_1479[[i]] <-   data.frame(header = header, cite = cite, chamber_senate = chamber_senate, 
-                             judges_names = judges_names,
-                             judge1 = judge1, judge2 = judge2, judge3 = judge3,
-                             link_decision = link_decision)
-
-
-message("Iteration ", i, " of ", length(decisions),  " successful.")
-message("taking a break")
-Sys.sleep(1.5)
-  
-}
-
-
-df_1161_1479  <- do.call("rbind", list_1161_1479)
-
-
-#decision 1479 is problematic becaust it is a weired Verzögerungsbeschwerde and does not follow the normal structure.
-#TO DO: fix it with trycatch error such that the loop continues
-
-
-```
-
+Now we do this for all the decisions:
 
 ```{r}
 
+list_all <- list()
 
-list_1481_1954 <- list()
-
-for(i in 1481:1954){
-  
-
-  message("Scraping decision ", i)
-  
-  case <- read_html(decisions[i])
-  
-  header <- case %>% html_nodes("#navBreadcrumbs strong") %>% html_text()
-  cite <- case %>% html_nodes(".cite") %>% html_text()
-  chamber_senate <- case %>% html_nodes(".rr1") %>% html_text() %>% str_c(collapse = " ")
-  
-  judges_names <- case %>% html_nodes(".rr2 span") %>% html_text()
-  
-  if(length(judges_names) == 0){
-    judges_names1 <- case %>% html_nodes(".rr2") %>% html_text() %>% strsplit("\n") %>% unlist()
-    judge1 <- judges_names1[1]
-    judge2 <- judges_names1[2]
-    judge3 <- judges_names1[3]
-    judges_names <- str_c(judges_names1, collapse = " ")
-  } else{
-    
-  judge1 <- judges_names[1]
-  judge2 <- judges_names[2]
-  judge3 <- judges_names[3]
-  judges_names <- str_c(judges_names, collapse = " ")
-  }
-
-  link_decision <- case %>% html_nodes(".cite a") %>% html_text()
-  
-  #do not extract the aktenzeichen; this can be done via the header later; the reason is that the AZ link is error prone if multiple of them are collected together
-  #aktenzeichen <- case %>% html_nodes(".az2 span") %>% html_text()
-  #aktenzeichen <- aktenzeichen[1] #extract only the first AZ; this is also the one shown in the link of a decision
-  
-  list_1481_1954[[i]] <-   data.frame(header = header, cite = cite, chamber_senate = chamber_senate, 
-                                 judges_names = judges_names,
-                                 judge1 = judge1, judge2 = judge2, judge3 = judge3,
-                                 link_decision = link_decision)
-  
-  
-  message("Iteration ", i, " of ", length(decisions),  " successful.")
-  message("taking a break")
-  Sys.sleep(1.5)
-  
-}
-
-
-df_1481_1954  <- do.call("rbind", list_1481_1954)
-
-```
-
-decision 1955 is a Venice Commission abstract summary. Not a real decision. Cannot find judge names.
-
-
-```{r}
-
-
-list_1956 <- list()
-
-for(i in 1956:length(decisions)){
-  
-
-  message("Scraping decision ", i)
-  
-  case <- read_html(decisions[i])
-  
-  header <- case %>% html_nodes("#navBreadcrumbs strong") %>% html_text()
-  cite <- case %>% html_nodes(".cite") %>% html_text()
-  chamber_senate <- case %>% html_nodes(".rr1") %>% html_text() %>% str_c(collapse = " ")
-  
-  judges_names <- case %>% html_nodes(".rr2 span") %>% html_text()
-  
-  if(length(judges_names) == 0){
-    judges_names1 <- case %>% html_nodes(".rr2") %>% html_text() %>% strsplit("\n") %>% unlist()
-    judge1 <- judges_names1[1]
-    judge2 <- judges_names1[2]
-    judge3 <- judges_names1[3]
-    judges_names <- str_c(judges_names1, collapse = " ")
-  } else{
-    
-  judge1 <- judges_names[1]
-  judge2 <- judges_names[2]
-  judge3 <- judges_names[3]
-  judges_names <- str_c(judges_names, collapse = " ")
-  }
-
-    if(length(chamber_senate == 0)){
-    chamber_senate <- "Not found"
-  }
-  
-  
-  
-  link_decision <- case %>% html_nodes(".cite a") %>% html_text()
-  
-  #do not extract the aktenzeichen; this can be done via the header later; the reason is that the AZ link is error prone if multiple of them are collected together
-  #aktenzeichen <- case %>% html_nodes(".az2 span") %>% html_text()
-  #aktenzeichen <- aktenzeichen[1] #extract only the first AZ; this is also the one shown in the link of a decision
-  
-  list_1956[[i]] <-   data.frame(header = header, cite = cite, chamber_senate = chamber_senate, 
-                                 judges_names = judges_names,
-                                 judge1 = judge1, judge2 = judge2, judge3 = judge3,
-                                 link_decision = link_decision)
-  
-  
-  message("Iteration ", i, " of ", length(decisions),  " successful.")
-  message("taking a break")
-  Sys.sleep(1.5)
-  
-}
-
-
-df_1956_6527  <- do.call("rbind", list_1956)
-
-```
-
-
-decision 6528 has no header where it names the judges.
-
-```{r}
-
-
-list_6529 <- list()
-
-for(i in 6529:length(decisions)){
+for(i in 1:length(decisions)){
   
   message("Scraping decision ", i)
   
@@ -322,9 +97,10 @@ for(i in 6529:length(decisions)){
   chamber_senate <- case %>% html_nodes(".rr1") %>% html_text() %>% str_c(collapse = " ")
   
   judges_names <- case %>% html_nodes(".rr2 span") %>% html_text()
+judges_names1 <- case %>% html_nodes(".rr2") %>% html_text() %>% strsplit("\n") %>% unlist() %>% trimws() %>% stri_remove_empty() #some of the names have empty/trailing whitespace which must be first removed to assign the names of the judges correctly
+
   
   if(length(judges_names) == 0){
-    judges_names1 <- case %>% html_nodes(".rr2") %>% html_text() %>% strsplit("\n") %>% unlist()
     judge1 <- judges_names1[1]
     judge2 <- judges_names1[2]
     judge3 <- judges_names1[3]
@@ -345,7 +121,7 @@ for(i in 6529:length(decisions)){
   }
   
   
-  
+   
   if(length(chamber_senate) == 0){
     chamber_senate <- "Not found"
   }
@@ -357,7 +133,7 @@ for(i in 6529:length(decisions)){
   #aktenzeichen <- case %>% html_nodes(".az2 span") %>% html_text()
   #aktenzeichen <- aktenzeichen[1] #extract only the first AZ; this is also the one shown in the link of a decision
   
-  list_6529[[i]] <-   data.frame(header = header, cite = cite, chamber_senate = chamber_senate, 
+  list_all[[i]] <-   data.frame(header = header, cite = cite, chamber_senate = chamber_senate, 
                                  judges_names = judges_names,
                                  judge1 = judge1, judge2 = judge2, judge3 = judge3,
                                  link_decision = link_decision)
@@ -369,84 +145,12 @@ for(i in 6529:length(decisions)){
 }
 
 
-df_6529_7176  <- do.call("rbind", list_6529)
-
-```
-
-
-Scrape it all:
-
-```{r}
-
+df_all_decisions <- do.call("rbind", list_all) #bind them all together in a data frame from the list.
 
 
 ```
 
-
-
-```{r}
-
-df_all_decisions  <- do.call("rbind", df_list)
-
-save(df_all_decisions, file = "df_all_decisions.Rda")
-
-
-```
-
-
-
-
-
-
-
-
-
-NOW GET ALL DECISIONS
-
-```{r}
-
-df_list <- list()
-
-for(i in 1:length(decisions)){
-  
-  
-  message("Scraping decision ", i)
-  
-case <- read_html(decisions[i])
-
-header <- case %>% html_nodes("#navBreadcrumbs strong") %>% html_text()
-cite <- case %>% html_nodes(".cite") %>% html_text()
-chamber_senate <- case %>% html_nodes(".rr1") %>% html_text() %>% str_c(collapse = " ")
-
-judges_names <- case %>% html_nodes(".rr2 span") %>% html_text()
-judge1 <- judges_names[1]
-judge2 <- judges_names[2]
-judge3 <- judges_names[3]
-
-judges_names <- str_c(judges_names, collapse = " ")
-
-link_decision <- case %>% html_nodes(".cite a") %>% html_text()
-
-#do not extract the aktenzeichen; this can be done via the header later; the reason is that the AZ link is error prone if multiple of them are collected together
-#aktenzeichen <- case %>% html_nodes(".az2 span") %>% html_text()
-#aktenzeichen <- aktenzeichen[1] #extract only the first AZ; this is also the one shown in the link of a decision
-
-df_list[[i]] <-   data.frame(header = header, cite = cite, chamber_senate = chamber_senate, 
-                             judges_names = judges_names,
-                             judge1 = judge1, judge2 = judge2, judge3 = judge3,
-                             link_decision = link_decision, aktenzeichen = aktenzeichen)
-
-
-message("Iteration ", i, " of ", length(decisions),  " successful.")
-message("taking a break")
-Sys.sleep(1.5)
-}
-
-df_all_decisions  <- do.call("rbind", df_list)
-
-save(df_all_decisions, file = "df_all_decisions.Rda")
-
-```
+This should take around 7176*1.5/60 minutes, depending on how much sys.sleep you choose. 
 
 ## Data Cleaning
 
@@ -459,7 +163,6 @@ source("helper_functions.R")
 
 chamber_decisions <- df_all_decisions[!grepl("Urteil", df_all_decisions$header), ]
 
-
 #some of the remaining ones are a "Beschluss", but also not a chamber decisions. Because we know that sometimes there is a mistake in the citings, we make double sure that we do not drop the wrong decisions by checking whether the word "Kammer" is in the header of the decision and the suggested citation:
 
 chamber_decisions$check_if_chamber1 <- grepl("Kammer", chamber_decisions$cite)
@@ -468,13 +171,16 @@ chamber_decisions$check_if_chamber2 <- grepl("Kammer", as.character(chamber_deci
 #always true
 chamber_decisions$check_if_chamber1 == chamber_decisions$check_if_chamber2
 
-#only keep the decisions which are not chamber decisions
+#only keep the decisions which are chamber decisions
 
 chamber_decisions <- chamber_decisions[chamber_decisions$check_if_chamber1 == TRUE, ]
 
 #clean the aktenzeichen
 
-chamber_decisions$az <- str_extract_all(chamber_decisions$header, "\\d \\w\\w\\w \\d+...") %>% unlist
+#There are 12 decisions where there is no az in the header. Thus, ifelse is used to replace these with NA such that the
+#length matches the nrow of the data.
+
+chamber_decisions$az  <- ifelse(is.na(str_extract(chamber_decisions$header, "\\d \\w\\w\\w \\d+...") %>% unlist), NA, str_extract_all(chamber_decisions$header, "\\d \\w\\w\\w \\d+...") %>% unlist)
 
 chamber_decisions <- chamber_decisions %>% select(az, everything())
 
@@ -501,11 +207,15 @@ chamber_decisions$kammer_cit <- str_extract(as.character(chamber_decisions$cite)
 chamber_decisions$kammer_txt <- str_extract(as.character(chamber_decisions$chamber_senate), "[0-9]+") 
 
 #check:
-chamber_decisions$kammer_cit == chamber_decisions$kammer_txt
-  
+table(chamber_decisions$kammer_cit == chamber_decisions$kammer_txt) #there are rare cases where the court makes an error when writing the citation. We will keep track of this later. An example is for instance this decision: http://www.bverfg.de/e/rk20130630_2bvr008513.html
 
+```  
+
+
+Now we have to take care of the names. This is complex and requires some manual editing. 
+
+```{r}
 #extracting the judges names
-
 
 for(i in 1:nrow(chamber_decisions)){
   
@@ -515,6 +225,144 @@ chamber_decisions$richter_txt[i] <- c(names_extract(chamber_decisions$judge1[i])
                                   gsub("\\s", ",", .) #to bring it in the form for later analyses
 
 }
+
+#There are some NAs we have to take care off:
+
+chamber_decisions$judges_names[is.na(chamber_decisions$richter_txt)]
+
+#replace the NAs with the judge 1 and judge 2 names and bind strings together:
+
+chamber_decisions$richter_txt[is.na(chamber_decisions$richter_txt)] <- str_c(names_extract(as.character(chamber_decisions$judge1[is.na(chamber_decisions$richter_txt)])),
+      names_extract(as.character(chamber_decisions$judge2[is.na(chamber_decisions$richter_txt)])))
+  
+#check the levels:
+
+unique(levels(as.factor(chamber_decisions$richter_txt)))
+
+#apply second cleaning:
+
+chamber_decisions$richter_txt <- clean_names2(chamber_decisions$richter_txt)
+
+#check the levels again:
+
+unique(levels(as.factor(chamber_decisions$richter_txt)))
+
+
+####some more checks:
+
+# consolidate richter (from cite)
+richter <- clean.names(chamber_decisions$richter_txt)
+#richter[richter=="No names in the text"] <- clean.names(case$richter_cit)[richter=="No names in the text"]
+richter[richter=="None"] <- NA
+
+# no of richter
+nrichter <- unlist(lapply(richter.split(richter), length)) 
+
+table(nrichter)
+
+chamber_decisions$nrichter <- nrichter
+
+#write all problematic cases into vector to check them
+test1 <- chamber_decisions$judges_names[chamber_decisions$nrichter != 3] %>% stri_na2empty() %>%  stri_remove_empty()
+
+list_all_names <- c("Baer", "Böckenförde", "Britz", "Broß", "Bryde",
+                    "Eichberger", "Gerhardt", "Christ", "DiFabio", "Gaier", "Graßhof",
+                    "Grimm", "Haas", "Harbarth", "Hassemer", "Hoffmann-Riem", "Hohmann-Dennhardt",
+                    "Hömig", "Huber", "Jaeger", "Jentsch", "Kessal-Wulf", "Kirchhof", "König", "Kruis",
+                    "Kühling", "Landau", "Langenfeld", "Limbach", "Lübbe-Wolff", "Maidowski", "Masing",
+                    "Mellinghoff", "Müller", "Osterloh", "Ott", "Papier", "Paulus", "Radtke", "Schluckebier",
+                    "Seidl", "Sommer", "Steiner", "Voßkuhle", "Winter")
+
+#set the Schreibweise to all names the same: 
+
+list_all_names <- clean.names(list_all_names)
+test1 <- clean.names(test1)
+
+#check whether all unique names (important for matching later):
+length(list_all_names) == length(unique(list_all_names))
+
+correct_names <- list()
+
+for(i in 1:length(test1)){
+  
+correct_names[[i]] <- str_c(str_extract_all(test1[i], list_all_names) %>% unlist(), collapse = ",")
+
+}
+
+#The last two are empty (Nothing found), so we have to set them NA to bind the vector the original data frame
+correct_names[[61]] <- NA
+correct_names[[62]] <- NA
+
+#write into data set:
+
+chamber_decisions$richter_txt[chamber_decisions$nrichter != 3] <- unlist(correct_names)
+
+#now check njudges again:
+
+richter <- clean.names(chamber_decisions$richter_txt)
+
+# no of richter
+nrichter <- unlist(lapply(richter.split(richter), length)) 
+
+chamber_decisions$nrichter2 <- nrichter
+
+table(nrichter)
+
+```
+
+There are 3 names which are still wrong (less than 3 judges in a panel). I will add these manually:
+
+No header:
+
+https://www.bundesverfassungsgericht.de/e/rk19990413_2bvr056299.html
+
+```{r}
+
+chamber_decisions$richter_txt[chamber_decisions$nrichter2 != 3] <- c("Hohmann-Dennhardt,Gaier,Kirchhof", "Limbach,Winter,Hassemer", "Limbach,Winter,Hassemer")
+
+#check:
+check_names <- str_split(chamber_decisions$richter_txt,",") %>% unlist()
+
+unique(levels(as.factor(check_names)))
+
+#Still trailing whitespace:
+
+chamber_decisions$richter_txt <- sum(grepl(" Hömig", chamber_decisions$richter_txt))
+
+
+
+check_names <- str_split(chamber_decisions$richter_txt,",") %>% unlist()
+
+unique(levels(as.factor(check_names)))
+
+unique(levels(as.factor(check_names)))[49]
+
+
+```
+
+
+```{r}
+#some names are still wrong. This is because of inconsistencies on the page of the court: e.g. https://www.bundesverfassungsgericht.de/e/rk20071227_1bvr085306.html . Here, there is an unusual "\n" on the place where the names of the judges appear.
+
+#https://www.bundesverfassungsgericht.de/e/qk20160730_1bvq002916.html repeats the names
+
+#These are the cases where there are formatting errors on the page:
+
+links_formatting_errors <- data.frame(
+  aktenzeichen = chamber_decisions$az[grepl("durch", chamber_decisions$richter_txt)], 
+                                      header = chamber_decisions$header[grepl("durch", chamber_decisions$richter_txt)], 
+                                      link = chamber_decisions$link_decision[grepl("durch", chamber_decisions$richter_txt)])
+
+#write for GFCC:rfG, Urteil des Zweiten Sen
+
+write.csv(links_formatting_errors, "links_formatting_errors.csv")
+
+
+
+#######
+
+
+
 
 #Einstweilige Anordnung:
 
@@ -532,9 +380,12 @@ chamber_decisions <- chamber_decisions %>%
 
 save(chamber_decisions, file = "chamber_decision_cleaned.Rda")
 
+write.csv(chamber_decisions, file = "chamber_decision_cleaned.csv")
 
 ```
 
+
+You can of course easily extend this script by scraping additional information, such as how the overall outcome of the case was or who are the plaintiffs etc. 
 
 
 
