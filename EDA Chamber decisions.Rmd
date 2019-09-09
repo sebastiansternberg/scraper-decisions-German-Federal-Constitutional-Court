@@ -20,12 +20,35 @@ require(magrittr)
 require(dplyr)
 require(ggplot2)
 require(lubridate)
+require(stringi)
+require(stringr)
+require(strex) #regex etc.
+require(ggthemes)
 
 #load data
 
 load("chamber_decision_cleaned.Rda")
 
 df <- chamber_decisions
+
+#fill NAs of kammer_txt (with kammer of citation)
+
+df$kammer_txt[is.na(df$kammer_txt)] <- df$kammer_cit[is.na(df$kammer_txt)]
+
+#some NAs in the AZ:
+
+df$link <- as.character(df$link)
+
+#We extract them from the link:
+
+df$az[is.na(df$az)] <- str_extract(df$link[is.na(df$az)], "\\dbvr\\d+")
+
+#take care of NAs in Senat. Senat is always the first number of the AZ:
+
+df$senat[is.na(df$senat)] <- str_first_number(df$az[is.na(df$senat)])
+
+#no more NAs!
+sapply(df, function(y) sum(length(which(is.na(y)))))
 
 ```
 
@@ -37,7 +60,7 @@ df <- chamber_decisions
 ```{r}
 
 df$year <- year(df$date)
-df$month <- month(df$date)
+df$month <- month(df$date) %>% as.factor()
 df$weekday <- wday(df$date, label = T)
 
 ```
@@ -45,15 +68,18 @@ df$weekday <- wday(df$date, label = T)
 
 ```{r}
 
+
+df <- df %>% filter(year >1997)
+
 df_year <- df %>% group_by(year) %>% tally()
 df_year_senat <- df %>% group_by(year, senat) %>% tally()
-df_year_senat_chamber <- df %>% group_by(year, senat, chamber) %>% tally()
+df_year_senat_chamber <- df %>% group_by(year, senat, kammer_txt) %>% tally()
 
 
 
 #in one call
-ggplot(tally(group_by(df, Degree.Year, Employment.Data.Type)),
-    aes(x = Degree.Year, y = n, fill = Employment.Data.Type)) +
+ggplot(tally(group_by(df, year, senat)),
+    aes(x = year, y = n, fill = senat)) +
     geom_bar(stat="identity") + labs(fill="Employment")
 
 
@@ -66,19 +92,79 @@ ggplot(df_year_senat, aes(x = year, y = n, fill = senat)) +
     geom_bar(stat="identity") + labs(fill="Senate")
 
 
+
+#year by Senate chamber
+
+
+count_pct <- function(df) {
+  return(
+    df %>%
+      tally %>% 
+      mutate(n_pct = 100*n/sum(n))
+  )
+}
+
+
+df_senat1 <- df %>% filter(senat == 1) %>% group_by(year, kammer_txt) %>% count_pct()
+df_senat2 <- df %>% filter(senat == 2) %>% group_by(year, kammer_txt) %>% count_pct()
+
+
+outfolder <- "C:/Users/ssternbe/Dropbox/Kaggle/Scraper_GFCC_Decisions/scraper-decisions-German-Federal-Constitutional-Court/out/figures/"
+
+pdf(paste0(outfolder, "/","perc_Senate1byChamber.pdf"))
+
+ggplot(df_senat1, aes(x = year, y=n_pct, fill=kammer_txt)) + 
+    geom_bar(position="fill", stat="identity") + labs(title = "Senate 1", fill="Chamber") + 
+  theme_tufte()
+dev.off()
+
+pdf(paste0(outfolder, "/","perc_Senate2byChamber.pdf"))
+
+
+ggplot(df_senat2, aes(x = year, y=n_pct, fill=kammer_txt)) + 
+    geom_bar(position="fill", stat="identity") + labs(title = "Senate 2", fill = "Chamber")+
+  theme_tufte()
+
+
+dev.off()
+
 ```
 
 
 
 
+per weekday
+
+
+```{r}
+
+#aggregate by weekday
+
+ggplot(tally(group_by(df, weekday)),
+    aes(x = weekday, y = n)) +
+    geom_bar(stat="identity") + theme_tufte()
+
+
+ggplot(tally(group_by(df, senat, weekday)),
+    aes(x = weekday, y = n, fill = senat)) +
+    geom_bar(stat="identity") + labs(fill="Senate")
+
+
+
+```
+
+per month:
+
+```{r}
+
+ggplot(tally(group_by(df, month)),
+    aes(x = month, y = n)) +
+    geom_bar(stat="identity") + theme_tufte()
 
 
 
 
-
-
-
-
+```
 
 
 

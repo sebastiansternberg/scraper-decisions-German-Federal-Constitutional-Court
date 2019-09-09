@@ -96,7 +96,7 @@ for(i in 1:length(decisions)){
   cite <- case %>% html_nodes(".cite") %>% html_text()
   chamber_senate <- case %>% html_nodes(".rr1") %>% html_text() %>% str_c(collapse = " ")
   
-  judges_names <- case %>% html_nodes(".rr2 span") %>% html_text()
+judges_names <- case %>% html_nodes(".rr2 span") %>% html_text()
 judges_names1 <- case %>% html_nodes(".rr2") %>% html_text() %>% strsplit("\n") %>% unlist() %>% trimws() %>% stri_remove_empty() #some of the names have empty/trailing whitespace which must be first removed to assign the names of the judges correctly
 
   
@@ -112,7 +112,7 @@ judges_names1 <- case %>% html_nodes(".rr2") %>% html_text() %>% strsplit("\n") 
   judge3 <- judges_names[3]
   judges_names <- str_c(judges_names, collapse = " ")
   }
-  if(length(judges_names1) == 0){
+  if(length(judges_names1) == 0){ #if neither name at html position of judgename and judgename1, write NA
     
     judges_names <- "Not found in header"
     judge1 <- NA
@@ -121,12 +121,12 @@ judges_names1 <- case %>% html_nodes(".rr2") %>% html_text() %>% strsplit("\n") 
   }
   
   
-   
+   #if there is no chamber and senate write Not found
   if(length(chamber_senate) == 0){
     chamber_senate <- "Not found"
   }
   
-  
+  #get link to decision
   link_decision <- case %>% html_nodes(".cite a") %>% html_text()
   
   #do not extract the aktenzeichen; this can be done via the header later; the reason is that the AZ link is error prone if multiple of them are collected together
@@ -138,7 +138,7 @@ judges_names1 <- case %>% html_nodes(".rr2") %>% html_text() %>% strsplit("\n") 
                                  judge1 = judge1, judge2 = judge2, judge3 = judge3,
                                  link_decision = link_decision)
   
-  
+  #Display message
   message("Iteration ", i, " of ", length(decisions),  " successful.")
   message("taking a break")
   Sys.sleep(1.5)
@@ -267,7 +267,7 @@ test1 <- chamber_decisions$judges_names[chamber_decisions$nrichter != 3] %>% str
 
 list_all_names <- c("Baer", "Böckenförde", "Britz", "Broß", "Bryde",
                     "Eichberger", "Gerhardt", "Christ", "DiFabio", "Gaier", "Graßhof",
-                    "Grimm", "Haas", "Harbarth", "Hassemer", "Hoffmann-Riem", "Hohmann-Dennhardt",
+                    "Grimm", "Haas","Hermanns", "Harbarth", "Hassemer", "Hoffmann-Riem", "Hohmann-Dennhardt",
                     "Hömig", "Huber", "Jaeger", "Jentsch", "Kessal-Wulf", "Kirchhof", "König", "Kruis",
                     "Kühling", "Landau", "Langenfeld", "Limbach", "Lübbe-Wolff", "Maidowski", "Masing",
                     "Mellinghoff", "Müller", "Osterloh", "Ott", "Papier", "Paulus", "Radtke", "Schluckebier",
@@ -323,20 +323,48 @@ chamber_decisions$richter_txt[chamber_decisions$nrichter2 != 3] <- c("Hohmann-De
 #check:
 check_names <- str_split(chamber_decisions$richter_txt,",") %>% unlist()
 
-unique(levels(as.factor(check_names)))
+unique(check_names)
 
 #Still trailing whitespace:
 
-chamber_decisions$richter_txt <- sum(grepl(" Hömig", chamber_decisions$richter_txt))
-
-
-
+#we have to remove them manually; strim or gsub \\s does not work.
 check_names <- str_split(chamber_decisions$richter_txt,",") %>% unlist()
 
-unique(levels(as.factor(check_names)))
+chamber_decisions$richter_txt <- gsub(unique(check_names)[33], "Lübbe-Wolff",
+                                      chamber_decisions$richter_txt)
 
-unique(levels(as.factor(check_names)))[49]
+chamber_decisions$richter_txt <- gsub(unique(check_names)[34], "Gerhardt",
+                                      chamber_decisions$richter_txt)
 
+
+chamber_decisions$richter_txt <- gsub(unique(check_names)[40], "Hömig",
+                                      chamber_decisions$richter_txt)
+
+chamber_decisions$richter_txt <- gsub(unique(check_names)[41], "Bryde",
+                                      chamber_decisions$richter_txt)
+
+chamber_decisions$richter_txt <- gsub(unique(check_names)[50], "Jaeger",
+                                      chamber_decisions$richter_txt)
+
+chamber_decisions$richter_txt <- gsub(unique(check_names)[51], "Steiner",
+                                      chamber_decisions$richter_txt)
+
+chamber_decisions$richter_txt <- gsub(unique(check_names)[53], "Kruis",
+                                      chamber_decisions$richter_txt)
+
+chamber_decisions$richter_txt <- gsub(unique(check_names)[54], "Sommer",
+                                      chamber_decisions$richter_txt)
+
+
+#check again:
+
+check_names <- str_split(chamber_decisions$richter_txt,",") %>% unlist()
+unique(check_names)
+
+#do we have all names that we manually identified?
+length(list_all_names) == length(unique(check_names))
+
+#Finally. Yes we have.
 
 ```
 
@@ -360,9 +388,11 @@ write.csv(links_formatting_errors, "links_formatting_errors.csv")
 
 
 #######
+```
 
 
-
+Identify Einstweilige Anordnung (Provisional Orders):
+```{r}
 
 #Einstweilige Anordnung:
 
@@ -380,7 +410,7 @@ chamber_decisions <- chamber_decisions %>%
 
 save(chamber_decisions, file = "chamber_decision_cleaned.Rda")
 
-write.csv(chamber_decisions, file = "chamber_decision_cleaned.csv")
+write.csv(chamber_decisions, file = "chamber_decision_cleaned.csv", fileEncoding = "UTF-8")
 
 ```
 

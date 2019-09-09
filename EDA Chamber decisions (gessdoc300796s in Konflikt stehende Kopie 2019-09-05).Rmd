@@ -1,0 +1,144 @@
+---
+title: "EDA Chamber Decisions GFCC"
+author: "Sebastian Sternberg"
+date: "2 September 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+Load data and packages
+
+```{r}
+rm(list = ls())
+
+require(magrittr)
+require(dplyr)
+require(ggplot2)
+require(lubridate)
+
+#load data
+
+load("chamber_decision_cleaned.Rda")
+
+df <- chamber_decisions
+
+#fill NAs of kammer_txt (with kammer of citation)
+
+df$kammer_txt[is.na(df$kammer_txt)] <- df$kammer_cit[is.na(df$kammer_txt)]
+
+#some NAs in the AZ:
+
+df$link <- as.character(df$link)
+
+sum(grep("[0-9]bvr", df$link))
+
+grepl("[0-9]bvr[0-9]+", df$link[is.na(df$senat)])
+
+
+
+http://www.bverfg.de/e/rk19990315_2bvr037599.html
+
+sapply(df, function(y) sum(length(which(is.na(y)))))
+
+```
+
+
+# Summarize by date
+
+### Summarize by year, month, week day
+
+```{r}
+
+df$year <- year(df$date)
+df$month <- month(df$date)
+df$weekday <- wday(df$date, label = T)
+
+```
+
+
+```{r}
+
+df_year <- df %>% group_by(year) %>% tally()
+df_year_senat <- df %>% group_by(year, senat) %>% tally()
+df_year_senat_chamber <- df %>% group_by(year, senat, kammer_txt) %>% tally()
+
+
+
+#in one call
+ggplot(tally(group_by(df, year, senat)),
+    aes(x = year, y = n, fill = senat)) +
+    geom_bar(stat="identity") + labs(fill="Employment")
+
+
+ggplot(df_year, aes(x = year, y = n)) +
+    geom_bar(stat="identity")
+
+
+#year by Senate
+ggplot(df_year_senat, aes(x = year, y = n, fill = senat)) +
+    geom_bar(stat="identity") + labs(fill="Senate")
+
+
+
+#year by Senate chamber
+
+
+df_senat1 <- df %>% filter(senat == 1)
+df_senat2 <- df %>% filter(senat == 2)
+
+#Senate 1 by chamber
+
+ggplot(tally(group_by(df_senat1, year, kammer_txt), format = "percent"),
+    aes(x = year, y = n, fill = kammer_txt)) +
+    geom_bar(stat="identity") + labs(fill="Chamber")
+
+ggplot(tally(group_by(df_senat2, year, kammer_xt)),
+    aes(x = year, y = n, fill = kammer_txt)) +
+    geom_bar(stat="identity") + labs(fill="Chamber")
+
+#for each Senate Chamber separately
+
+
+
+df %>% group_by()
+
+count_pct <- function(df) {
+  return(
+    df %>%
+      tally %>% 
+      mutate(n_pct = 100*n/sum(n))
+  )
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
