@@ -88,6 +88,11 @@ clean_names2 <- function(x){
   x <- gsub("KirchhofMasingBaer", "Kirchhof,Masing,Baer", x)
   x <- gsub("Lübbe-Wollf", "Lübbe-Wolff", x)
   
+  x <- gsub("PrsitenPapier", "Papier", x)
+  x <- gsub("PrsitinLimbach", "Limbach", x)
+  
+  
+  
   x <- gsub("Gerhardttt", "Gerhardt", x)
   x <- gsub("Gerhardtt", "Gerhardt", x)
   x <- gsub("inHohmann-Dennhardt", "Hohmann-Dennhardt", x)

@@ -24,19 +24,30 @@ require(dplyr)
 
 This extracts all the links to each individual Chamber decision in the first step. These links are then used to extact the information in the second step. This should take around 45 minutes to finish, depending on the sys.sleep chosen.
 
+The starting site:
+
+#https://www.bundesverfassungsgericht.de/SiteGlobals/Forms/Suche/Entscheidungensuche_Formular.html?gtp=5403124_list%253D1&submit=Senden&dateAfter=01.01.1998&dateBefore=31.12.2019&language_=de
+
+7013 links are expected:
+
+Iterate over the link:
+
 ```{r}
 
-pages <- c(1:721) # there are 721 pages to scrape (721 pages with each 10 decisions)
+pages <- c(1:702) # there are 702 pages to scrape (702 pages with each 10 decisions), if search is narrowed down to decisions between 01.01.1998 and 31.12.2019 and language  = German
 
 # getting the links to the decisions
 links <- c()
 for (i in 1:length(pages)){
   message("Getting decision ", i)
-  html <- read_html(paste("https://www.bundesverfassungsgericht.de/SiteGlobals/Forms/Suche/Entscheidungensuche_Formular.html?gtp=5403124_list%253D",i,"&language_=de", sep = ""))
+  html <- read_html(paste("https://www.bundesverfassungsgericht.de/SiteGlobals/Forms/Suche/Entscheidungensuche_Formular.html?gtp=5403124_list%253D",
+      i, "&submit=Senden&dateAfter=01.01.1998&dateBefore=31.12.2019&language_=de", 
+      sep = "")
+)
   href <- html %>% html_nodes(".relevance100+a") %>% html_attr("href")
   links <- c(links, href)
-  message("taking a break of 3 seconds")
-  Sys.sleep(3)
+  message("taking a break of 1.0 seconds")
+  Sys.sleep(1.0)
 }
 
 links
@@ -180,7 +191,9 @@ chamber_decisions <- chamber_decisions[chamber_decisions$check_if_chamber1 == TR
 #There are 12 decisions where there is no az in the header. Thus, ifelse is used to replace these with NA such that the
 #length matches the nrow of the data.
 
-chamber_decisions$az  <- ifelse(is.na(str_extract(chamber_decisions$header, "\\d \\w\\w\\w \\d+...") %>% unlist), NA, str_extract_all(chamber_decisions$header, "\\d \\w\\w\\w \\d+...") %>% unlist)
+chamber_decisions$az <- str_extract(chamber_decisions$header, "\\d \\w\\w\\w \\d+...") %>% unlist
+
+# chamber_decisions$az  <- ifelse(is.na(str_extract(chamber_decisions$header, "\\d \\w\\w\\w \\d+...") %>% unlist), NA, str_extract_all(chamber_decisions$header, "\\d \\w\\w\\w \\d+...") %>% unlist)
 
 chamber_decisions <- chamber_decisions %>% select(az, everything())
 
@@ -198,8 +211,26 @@ chamber_decisions$date <- german_date_to_date(chamber_decisions$date)
 #extract the senate the chamber decision was decided in
 
 chamber_decisions$senat <- str_extract(chamber_decisions$az, "[0-9]+") 
-chamber_decisions$senat_check <- ifelse(grepl("Ersten Senats", as.character(chamber_decisions$chamber_senate)), 1, 2)
 
+chamber_decisions$senat_check <- ifelse(grepl("Ersten Senats", as.character(chamber_decisions$chamber_senate)), 1, NA)
+
+chamber_decisions$senat_check[grepl("Zweiten Senats", as.character(chamber_decisions$chamber_senate))] <- 2
+
+table(chamber_decisions$senat_check, useNA = "ifany")
+
+#There are some mistakes done by the court:
+
+table(chamber_decisions$senat_check == chamber_decisions$senat)
+
+#This is the wrong decision:
+#https://www.bundesverfassungsgericht.de/e/rk20090224_1bvr018909.html
+
+#correct this manually:
+
+chamber_decisions$senat[chamber_decisions$az == "2 BvR 189/09"] <- "1"
+
+#check again:
+table(chamber_decisions$senat_check == chamber_decisions$senat)
 
 #extract the chambers
 
