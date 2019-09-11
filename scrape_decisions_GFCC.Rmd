@@ -91,7 +91,7 @@ link_decision <- case %>% html_nodes(".cite a") %>% html_text()
 
 ```
 
-Now we do this for all the decisions:
+Now we do this for all the decisions. If you have access to a VPN, it might help to avoid connection losses during the scraping process. 
 
 ```{r}
 
@@ -259,12 +259,16 @@ chamber_decisions$richter_txt[i] <- c(names_extract(chamber_decisions$judge1[i])
 
 #There are some NAs we have to take care off:
 
+chamber_decisions$judges_names <- as.character(chamber_decisions$judges_names)
+
+sum(is.na(chamber_decisions$richter_txt))
+#these are the problematic cases: very often, 2 judges are written in j1 j2 and j3
 chamber_decisions$judges_names[is.na(chamber_decisions$richter_txt)]
 
 #replace the NAs with the judge 1 and judge 2 names and bind strings together:
 
-chamber_decisions$richter_txt[is.na(chamber_decisions$richter_txt)] <- str_c(names_extract(as.character(chamber_decisions$judge1[is.na(chamber_decisions$richter_txt)])),
-      names_extract(as.character(chamber_decisions$judge2[is.na(chamber_decisions$richter_txt)])))
+# chamber_decisions$richter_txt[is.na(chamber_decisions$richter_txt)] <- str_c(names_extract(as.character(chamber_decisions$judge1[is.na(chamber_decisions$richter_txt)])),
+#       names_extract(as.character(chamber_decisions$judge2[is.na(chamber_decisions$richter_txt)])))
   
 #check the levels:
 
@@ -296,7 +300,7 @@ chamber_decisions$nrichter <- nrichter
 #write all problematic cases into vector to check them
 test1 <- chamber_decisions$judges_names[chamber_decisions$nrichter != 3] %>% stri_na2empty() %>%  stri_remove_empty()
 
-list_all_names <- c("Baer", "Böckenförde", "Britz", "Broß", "Bryde",
+list_all_names <- c("Baer", "Britz", "Broß", "Bryde",
                     "Eichberger", "Gerhardt", "Christ", "DiFabio", "Gaier", "Graßhof",
                     "Grimm", "Haas","Hermanns", "Harbarth", "Hassemer", "Hoffmann-Riem", "Hohmann-Dennhardt",
                     "Hömig", "Huber", "Jaeger", "Jentsch", "Kessal-Wulf", "Kirchhof", "König", "Kruis",
@@ -374,17 +378,17 @@ chamber_decisions$richter_txt <- gsub(unique(check_names)[40], "Hömig",
 chamber_decisions$richter_txt <- gsub(unique(check_names)[41], "Bryde",
                                       chamber_decisions$richter_txt)
 
-chamber_decisions$richter_txt <- gsub(unique(check_names)[50], "Jaeger",
-                                      chamber_decisions$richter_txt)
-
-chamber_decisions$richter_txt <- gsub(unique(check_names)[51], "Steiner",
-                                      chamber_decisions$richter_txt)
-
-chamber_decisions$richter_txt <- gsub(unique(check_names)[53], "Kruis",
-                                      chamber_decisions$richter_txt)
-
-chamber_decisions$richter_txt <- gsub(unique(check_names)[54], "Sommer",
-                                      chamber_decisions$richter_txt)
+# chamber_decisions$richter_txt <- gsub(unique(check_names)[50], "Jaeger",
+#                                       chamber_decisions$richter_txt)
+# 
+# chamber_decisions$richter_txt <- gsub(unique(check_names)[51], "Steiner",
+#                                       chamber_decisions$richter_txt)
+# 
+# chamber_decisions$richter_txt <- gsub(unique(check_names)[53], "Kruis",
+#                                       chamber_decisions$richter_txt)
+# 
+# chamber_decisions$richter_txt <- gsub(unique(check_names)[54], "Sommer",
+#                                       chamber_decisions$richter_txt)
 
 
 #check again:
@@ -395,7 +399,7 @@ unique(check_names)
 #do we have all names that we manually identified?
 length(list_all_names) == length(unique(check_names))
 
-#Finally. Yes we have.
+#Finally. Yesssss we have it.
 
 ```
 
