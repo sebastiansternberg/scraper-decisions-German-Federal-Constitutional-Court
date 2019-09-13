@@ -18,6 +18,7 @@ library(magrittr)
 library(stringr)
 require(stringi)
 require(dplyr)
+require(strex)
 
 ```
 
@@ -169,7 +170,7 @@ Clean the decisions. First drop the decisions with an "Urteil", because these ar
 
 ```{r}
 source("helper_functions.R")
-
+load("~/Dropbox/Kaggle/Scraper_GFCC_Decisions/scraper-decisions-German-Federal-Constitutional-Court/df_all_decisions3")
 #load the 
 
 chamber_decisions <- df_all_decisions[!grepl("Urteil", df_all_decisions$header), ]
@@ -179,12 +180,14 @@ chamber_decisions <- df_all_decisions[!grepl("Urteil", df_all_decisions$header),
 chamber_decisions$check_if_chamber1 <- grepl("Kammer", chamber_decisions$cite)
 chamber_decisions$check_if_chamber2 <- grepl("Kammer", as.character(chamber_decisions$chamber_senate))
 
-#always true
-chamber_decisions$check_if_chamber1 == chamber_decisions$check_if_chamber2
+#not always true
+table(chamber_decisions$check_if_chamber1 == chamber_decisions$check_if_chamber2)
 
-#only keep the decisions which are chamber decisions
+#only keep the decisions which are chamber decisions. Keep if one of the both is true or all is true. This is because sometimes, in the citation there is no chamber named, but also sometimes not in the chamber senate header. If one is true, it is true in general.
 
-chamber_decisions <- chamber_decisions[chamber_decisions$check_if_chamber1 == TRUE, ]
+chamber_decisions <- chamber_decisions[chamber_decisions$check_if_chamber1 == TRUE & chamber_decisions$check_if_chamber2  ==  FALSE | 
+                                         chamber_decisions$check_if_chamber1 == FALSE & chamber_decisions$check_if_chamber2 == TRUE |
+                                         chamber_decisions$check_if_chamber1 == TRUE & chamber_decisions$check_if_chamber2 == TRUE, ]
 
 #clean the aktenzeichen
 
@@ -240,7 +243,41 @@ chamber_decisions$kammer_txt <- str_extract(as.character(chamber_decisions$chamb
 #check:
 table(chamber_decisions$kammer_cit == chamber_decisions$kammer_txt) #there are rare cases where the court makes an error when writing the citation. We will keep track of this later. An example is for instance this decision: http://www.bverfg.de/e/rk20130630_2bvr008513.html
 
+chamber_decisions$is_same_chamber <- chamber_decisions$kammer_cit == chamber_decisions$kammer_txt
+
+#kammer_txt is always the right one. 
+
+
 ```  
+
+There are some missings in the data set we have to take care off. 
+
+```{r}
+####take care of NAs
+
+cat("Before cleaning there are", sum(is.na(chamber_decisions)), "NAs in the data set")
+
+#fill NAs of kammer_txt (with kammer of citation)
+
+chamber_decisions$kammer_txt[is.na(chamber_decisions$kammer_txt)] <- chamber_decisions$kammer_cit[is.na(chamber_decisions$kammer_txt)]
+
+#some NAs in the AZ:
+
+chamber_decisions$link <- as.character(chamber_decisions$link)
+chamber_decisions$az <- as.character(chamber_decisions$az)
+
+#We extract them from the link:
+
+chamber_decisions$az[is.na(chamber_decisions$az)] <- str_extract(chamber_decisions$link[is.na(chamber_decisions$az)], "\\dbvr\\d+")
+
+#take care of NAs in Senat. Senat is always the first number of the AZ:
+
+chamber_decisions$senat[is.na(chamber_decisions$senat)] <- str_first_number(chamber_decisions$az[is.na(chamber_decisions$senat)])
+
+#check:
+sapply(chamber_decisions, function(y) sum(length(which(is.na(y)))))
+
+```
 
 
 Now we have to take care of the names. This is complex and requires some manual editing. 
@@ -441,7 +478,10 @@ Now we have all the information that we need for the chamber paper. We save the 
 ```{r}
 
 chamber_decisions <- chamber_decisions %>% 
-  select(az, date, senat, kammer_cit, kammer_txt, richter_txt, anordnung, link = link_decision)
+  select(az, date, senat, kammer_txt, richter_txt, anordnung, link = link_decision)
+
+cat("The data is clean: before writing the data set there are", sum(is.na(chamber_decisions)), "NAs in the data set")
+
 
 save(chamber_decisions, file = "chamber_decision_cleaned.Rda")
 
